@@ -1,4 +1,4 @@
-# public
+# README
 
 cisVar.py is my pipeline written in python3 and uses regression_qtls.R. Put both of these scripts in the directory you want all the outputs to be in. regression_qtls.R is called inside of cisVar.py so you will not run it directly. Right now I have a MAF>1% in the R script but if you’d like to change it you can easily do that in the R script.
 
