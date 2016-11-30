@@ -1,6 +1,6 @@
 # README
 
-cisVar.py is my pipeline written in python3 and uses regression_qtls.R. Put both of these scripts in the directory you want all the outputs to be in. regression_qtls.R is called inside of cisVar.py so you will not run it directly. Right now I have a MAF>1% in the R script but if you’d like to change it you can easily do that in the R script.
+cisVar.py is my pipeline written in python3 and uses regression_qtls.R. Put both of these scripts in the directory you want all the outputs to be in. (regression_qtls.R) is called inside of (cisVar.py) so you will not run it directly. Right now I have a MAF>1% in the R script but if you’d like to change it you can easily do that inside the script.
 
 cisVar.py mpileup -F <SampleName> -f <fastaFile> -p <mpileupBEDfile> -B <sortedBam>
 cisVar.py post -F <SampleName> -r <readDepth> -a <allelesFile>
@@ -8,7 +8,7 @@ cisVar.py geno -F <SampleName> -r <readDepth> -i <individualsFile> -g <genotypes
 cisVar.py qtls -F <SampleName> -r <readDepth> -n <numberIndividuals>
 
  
-These are all the files you’ll need. Also use samtoolsv1.9< and bedtools.
+These are all the files you’ll need. Also use samtools v1.9< and bedtools v2.26.0<.
 
 -h	help
 
