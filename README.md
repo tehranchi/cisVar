@@ -26,7 +26,7 @@ These are all the files you’ll need. Also use samtoolsv1.9< and bedtools.
 		NA18486		    
 		NA18489
 		…
--a	The alleles file is a tab-sep file with no header (chr#, position, Ref_allele, Alt_allele), This file should match the length of the pileup file.
+-a	The alleles file is a tab-sep file with no header (chr#, position, Ref_allele, Alt_allele). This file should match the length of the pileup file.
 	
 	EX:
 		chr1	10505	A	T
