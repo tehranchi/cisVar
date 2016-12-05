@@ -1,6 +1,9 @@
 #!/usr/bin/python3
 
+##################################################################################
+# ADAPTED FROM EILON SHARON, https://github.com/eilon-s/bioinfo_scripts/rmdup.py
 # script removes duplicates and filters out unmapped reads
+##################################################################################
 
 import sys, os, subprocess
 import argparse
