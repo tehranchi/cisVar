@@ -335,6 +335,6 @@ elif args.inputCommand == 'post':
     postcalc(args.prefix_name, args.trial_depths, args.allelesFileName)
     postTrim(args.prefix_name, args.trial_depths)
 elif args.inputCommand == 'geno':
-    genoExtract(args.prefix_name, args.trial_depths, args.individualslist, args.pop_name)
+    genoExtract(args.prefix_name, args.trial_depths, args.individualslist, args.genosFile)
 elif args.inputCommand == 'qtls':
     regPVAL(args.prefix_name, args.trial_depths, args.numIndv)
