@@ -1,6 +1,13 @@
 #!/usr/bin/R
 
 
+#====================================================================================
+#
+#        AUTHOR: Ashley Tehranchi, tehranchi576@gmail.com 
+#  ORGANIZATION: Stanford University
+#
+#====================================================================================
+
 linearRegression <-
 function(pd, gt, tmppfx, indiv) {
 
