@@ -1,16 +1,16 @@
 #!/usr/bin/python3
 
 """
-#====================================================================================
+#==============================================================================
 #
 #          FILE: cisVar (python 3)
-#        AUTHOR: Ashley Tehranchi, tehranchi576@gmail.com 
+#        AUTHOR: Ashley Tehranchi, tehranchi576@gmail.com
 #  ORGANIZATION: Stanford University
 #       CREATED: 2015-12-12 11:33
-# Last modified: 2016-11-11 10:56
+# Last modified: 2017-10-09 11:30
 #
 #
-#====================================================================================
+#==============================================================================
 
 
 cisVar mpileup -F <SampleName> -f <fastaFile> -p <mpileupBEDfile> -B <sortedBam>
@@ -33,6 +33,7 @@ import subprocess
 import scipy
 import numpy as np
 from scipy import stats
+import pandas as pd
 
 
 parser = argparse.ArgumentParser(description='Find cis QTLs based on an experimental selection method')
@@ -49,14 +50,14 @@ parser.add_argument('-g', '--genoFile', required=False, dest='genosFile', help='
 args = parser.parse_args()
 
 
-WorkingDirectory = os.getcwd() 
+WorkingDirectory = os.getcwd()
 
 ######################################################################################
 # MPILEUP FROM BAM FILES USING HG19 MASKED GENOME WITH BLACKLISTED REGIONS REMOVED
 ######################################################################################
 
 def mpileup(allCHRfasta, mpileupBEDfile, sortedBam, prefix_name):
-    os.system("samtools mpileup -Q 25 -f " + allCHRfasta +" -l "+ mpileupBEDfile +" " + sortedBam + " > " + prefix_name + ".mpileup.txt") 
+    os.system("samtools mpileup -Q 25 -f " + allCHRfasta +" -l "+ mpileupBEDfile +" " + sortedBam + " > " + prefix_name + ".mpileup.txt")
     ## outputs prefix.mpileup.txt
     return()
 
@@ -67,14 +68,12 @@ def mpileup(allCHRfasta, mpileupBEDfile, sortedBam, prefix_name):
 
 def postcalc(prefix_name, trial_depths, allelesFileName):
     os.system("module load samtools")
-    print (prefix_name)
-    print ("Post-ChIP calculation for min reads ",trial_depths)
+    print(prefix_name)
+    print("Post-ChIP calculation for min reads ",trial_depths)
     infilename = prefix_name + ".mpileup.txt"
     inalleles = allelesFileName
     outfilename = prefix_name + "." + str(trial_depths) + ".POST.txt"
     depth = int(trial_depths)
-    alleles = open(inalleles, 'r')
-    pileup = open(infilename, 'r')
 
     pileup_dictionary = {}
     count = 1
@@ -83,7 +82,7 @@ def postcalc(prefix_name, trial_depths, allelesFileName):
         for line in pileup:
             #print count
             count = count + 1
-            rows = line.rstrip('\n').split("\t")  
+            rows = line.rstrip('\n').split("\t")
             if (int(rows[3]) < depth):
                 Acount = 'NA'
                 Ccount = 'NA'
@@ -96,13 +95,13 @@ def postcalc(prefix_name, trial_depths, allelesFileName):
                 AltFreq = 'NA'
             else:
                 if (int(rows[3]) >= depth):
-                    read = str(rows[4]).lower()                              # isolate overlapping positions from reads, make all letters lowercase to count them properly
-                    Acount = read.count('a')            # count all A's, A is plus strand, a in negative strand, count both
+                    read = str(rows[4]).lower() # isolate overlapping positions from reads, make all letters lowercase to count them properly
+                    Acount = read.count('a')    # count all A's, A is plus strand, a in negative strand, count both
                     Ccount = read.count('c')
                     Gcount = read.count('g')
                     Tcount = read.count('t')
-                    countslist = [Acount, Ccount, Gcount, Tcount]       #make list of all counts
-                    index, ALTdepth = max(enumerate(countslist), key=operator.itemgetter(1))    #find index of largest number and the value
+                    countslist = [Acount, Ccount, Gcount, Tcount]  #make list of all counts
+                    index, ALTdepth = max(enumerate(countslist), key=operator.itemgetter(1)) #find index of largest number and the value
                     #print("index ", index)
                     indels = rows[4].count('-') + rows[4].count('+')
                     REFdepth = int(rows[3]) - int(Acount) - int(Ccount) - int(Gcount) - int(Tcount) - int(indels)
@@ -125,15 +124,15 @@ def postcalc(prefix_name, trial_depths, allelesFileName):
                     AltFreq = "NA"
                     if (rows[3] == 0):
                         RefFreq = str(0)
-                        print ("mistake")
+                        print("mistake")
                     else:
-                        if (float(rows[3]) > depth) and ((float(REFdepth) / float(rows[3])) >= 0) :    ## depth greater than 0 and postfreq > 0 
+                        if (float(rows[3]) > depth) and ((float(REFdepth) / float(rows[3])) >= 0) :    ## depth greater than 0 and postfreq > 0
                             RefFreq = str(REFdepth / float(rows[3]))            # to get ref freq, totaldepth - altdepth = refdepth / totaldepth
                             AltFreq = str(1 - float(RefFreq))
             pileup_dictionary[rows[0] + "." + rows[1]] = rows[2:] + [Acount, Ccount, Gcount, Tcount, ALTdepth, REFdepth, ALTallele, RefFreq, AltFreq]
             #print("ALTallele, row ",ALTallele, rows)
             assert len(pileup_dictionary[rows[0] + "." + rows[1]]) == 13
-    linecounter =1  
+    linecounter =1
     with open(inalleles) as alleles:
         for line in alleles:
             row = line.rstrip().split('\t')
@@ -142,9 +141,9 @@ def postcalc(prefix_name, trial_depths, allelesFileName):
             try: matchingVector = pileup_dictionary[row[0] + '.' + row[1]]
             except: continue
             matchingVector = [str(x) for x in matchingVector]
-            if (matchingVector[8] == str(0)):                 #for alt alleles with 0 reads, force alt allele to be imputed geno alt allele
+            if (matchingVector[8] == str(0)): # for alt alleles with 0 reads, force alt allele to be imputed geno alt allele
                 matchingVector[10] = genoAltAllele
-            if (matchingVector[9] == str(0)):                     #for ref alleles with 0 reads, force ref allele to be imputed geno ref allele  
+            if (matchingVector[9] == str(0)): # for ref alleles with 0 reads, force ref allele to be imputed geno ref allele
                 matchingVector[0] = genoRefAllele
             postChipRefAllele = matchingVector[0].upper()
             postChipRefFreq = matchingVector[11]
@@ -163,9 +162,8 @@ def postcalc(prefix_name, trial_depths, allelesFileName):
             finalout = row[0] + "\t" + row[1] + "\t" + '\t'.join(matchingVector) + "\t" + str(outAllele) + "\t" + str(outfreq) + "\n"
             outfile.write(finalout)
     outfile.close()
-    alleles.close()
     print("post-frequency calculation DONE")
-    return ()    
+    return ()
 
 
 ######################################################################################
@@ -178,13 +176,13 @@ def postTrim(prefix_name, trial_depths):
     headerOUT.write(headertemp)
     headerOUT.close()
 
-    print ("File trimming ")
-    os.system("sed '/NA/d' " + prefix_name + "." + str(trial_depths) +  ".POST.txt | cut -f-4,7- > " + prefix_name + "." + str(trial_depths) + ".POSTt.txt") 
+    print("File trimming ")
+    os.system("sed '/NA/d' " + prefix_name + "." + str(trial_depths) +  ".POST.txt | cut -f-4,7- > " + prefix_name + "." + str(trial_depths) + ".POSTt.txt")
     os.system("cat mpileup.header.txt " + prefix_name + "."  + str(trial_depths) + ".POSTt.txt > " + prefix_name + "." + str(trial_depths) + ".POSTth.txt")
-    print (os.system("head " + prefix_name + "." + str(trial_depths) + ".POSTth.txt"))
-    bedOUT = open(prefix_name + "." + str(trial_depths) + ".bed", 'w')
-    openfile = open(prefix_name + "." + str(trial_depths) + ".POSTt.txt", 'r')
-    with open(prefix_name + "." + str(trial_depths) + ".POSTt.txt", 'r') as openfile:
+    print(os.system("head " + prefix_name + "." + str(trial_depths) + ".POSTth.txt"))
+    postin = prefix_name + "." + str(trial_depths) + ".POSTt.txt"
+    bedoutfile = prefix_name + "." + str(trial_depths) + ".bed"
+    with open(postin) as openfile, open(bedoutfile, 'w') as bedOUT:
         for line in openfile:
             rowtmp = line.rstrip().split('\t')
             chrom = rowtmp[0]
@@ -192,118 +190,82 @@ def postTrim(prefix_name, trial_depths):
             startpos = int(snp) - 1
             OUTrow = str(chrom) + '\t' + str(startpos) + '\t' + str(snp) + '\n'
             bedOUT.write(OUTrow)
-    bedOUT.close()
-    openfile.close()
-    print ("File trimming DONE")
+    print("File trimming DONE")
     return()
 
 ######################################################################################
 # GENOTYPE EXTRACTION OF POSTCALC SNPS
 ######################################################################################
-              
+
 def genoExtract(prefix_name, trial_depths, individualslist, genosFile):
-    print ("Extracting genotypes ")
     new_prefix = prefix_name + "." + str(trial_depths)
     postdataIN = new_prefix + ".POSTth.txt"
     outName = new_prefix + ".genotypes.txt"
     print("file: ", new_prefix)
-    postdata = open(postdataIN, 'r')
-    postlocs_dict = {}
-    count = 1
-    with open(postdataIN, 'r') as postdata:
-        for line in postdata:
-            #print 'line # ', count
-            count = count + 1
-            rows = line.rstrip('\n').split('\t')
-            postlocs_dict[rows[0] + '.' + rows[1]] = rows[2:]
-    filename = genosFile
-    genosIN = open(filename, 'r')
-    outfile = open(prefix_name+"geno.txt", 'w')
-    with open(filename) as genosIN:
-        for line in genosIN:
-            matchingVector = 'NA'
-            row = line.rstrip().split('\t')
-            namestring = row[0] + '.' + row[1]
-            if (namestring in postlocs_dict):
-                matchingVector = row
-                matchingVector = [str(x) for x in matchingVector]
-                fileOUT = '\t'.join(matchingVector) + '\n'
-                outfile.write(fileOUT)
-    genosIN.close()
-    outfile.close()
-    print ("Extraction done")
-    print ("transpose geno file with snps matching the postchip data")
-    
-    filename = prefix_name+"geno.txt"
-    tempgeno = open(filename, "r")
-    total_list = list()  #Big list for the entire file
-    flag=0
-    counter =0
-    for line in tempgeno:
-        counter +=1
-        line_list = line.rstrip().split("\t") #line_list holds the elements of one line
-        if flag==0:
-            lengthLineCheck = len(line_list)
-            flag +=1
-        if len(line_list)!=lengthLineCheck:
-            print (line)
-            print ("** WARNING ** Line has weird number of elements at line ", counter) 
-            print ("Number of elements: ", len(line_list)) 
-            print ("expected number : ", lengthLineCheck) 
-        total_list.append(line_list) 
-    tempgeno.close()
-    
-    line_of_interest = total_list[0]
-    length_of_line = len(line_of_interest)
-    length_of_file = len(total_list)
-    print ("File Read In complete")
-    #print ("Length of line is ", length_of_line)
-    #print ("Length of file is ", length_of_file)
-    fileOUT = open(prefix_name+"transpose.txt", 'w')
-    for x in range(length_of_line):
-        #print "Working on line: " , x , " of ", length_of_line
-        val_list = [i[x] for i in total_list]   #for i in total_list, keep the xth element in i
-        out_line = '\t'.join(val_list)  + "\n"
-        fileOUT.write(out_line)
-    fileOUT.close()
-    
-    # read in individuals
-    indv = open(individualslist , 'r')
-    indv_list= list()
-    print ("Reading file Locations")
-    for line in indv:
-        row = line.rstrip().split("\t")
-        indv_list.append(row)
-    print ("Individual Locations Read Complete")
-    genosIN1 = open(prefix_name+"transpose.txt", 'r')
-    genos_dict = {}
-    count = 1
-    with open(prefix_name+"transpose.txt", 'r') as genosIN1:
-        for line in genosIN1:
-            #print count
-            count = count + 1
-            rows = line.rstrip('\n').split('\t')    #strips \n spaces and splits column by tabs
-            genos_dict[rows[0]] = rows[1:]
 
-    # subset pooled individuals from total list of all individuals
-    print ("Extracting individuals")
-    indv = (individualslist , 'r')
-    outfinal = open(outName, 'w')
-    with open(individualslist) as indv:
-        for line in indv:
-            matchingVector = 'NA'
-            indrow = line.rstrip().split('\t')
-            try: matchingVector = genos_dict[indrow[0]]
-            except: continue
-            matchingVector = [str(x) for x in matchingVector]
-            #print (line)
-            fileOUT2 = '\t'.join(matchingVector) + '\n'
-            outfinal.write(fileOUT2)
-    outfinal.close()
-    genos_dict.clear()
-    os.system("rm " +prefix_name+ "geno.txt " +prefix_name+ "transpose.txt")
-    print ("Extracting genotypes DONE")
-    return()
+    # Get list of sites with POSTfreq data
+    print("Getting SNPs")
+    postlocs = pd.read_csv(postdataIN, sep='\t')
+    postlocs['idx'] = postlocs[postlocs.columns[0]].astype(str) + '.' + postlocs[postlocs.columns[1]].astype(str)
+    print("Got SNPs")
+
+    print("Reading file Locations")
+    with open(individualslist , 'r') as indv:
+        indv_list = frozenset(indv.read().strip().split('\n'))
+    dtypes = {i: int for i in indv_list}
+    sidx = {}
+    c = 0
+    for i in indv_list:
+        sidx[i] = c
+        c += 1
+    print("Individual Locations Read Complete")
+
+    # Load genotypes
+    print("Loading genotypes")
+    genos = pd.read_csv(genosFile, sep='\t', dtype=dtypes)
+    genos['idx'] = genos[genos.columns[0]].astype(str) + '.' + genos[genos.columns[1]].astype(str)
+    print("Genotypes loaded")
+    print("Dropping indels")
+    l1 = len(genos)
+    genos = genos[(genos.alt.str.len() == 1) & (genos.ref.str.len() == 1)]
+    l2 = len(genos)
+    print("Dropped {} indels".format(l1-l2))
+    print("Dropping duplicates")
+    genos = genos.drop_duplicates('idx', keep=False)
+    l3 = len(genos)
+    print("Dropped {} duplicates".format(l2-l3))
+    print("Filtering by SNP")
+    genos = genos[genos.idx.isin(postlocs.idx)]
+    postlocs = postlocs[postlocs.idx.isin(genos.idx)]
+    print("Sorting")
+    genos = genos.sort_values(list(genos.columns[:2]))
+    postlocs = postlocs.sort_values(list(postlocs.columns[:2]))
+    genos = genos.set_index('idx', drop=True)
+    postlocs = postlocs.set_index('idx', drop=True)
+    print('Len {}: {}'.format(postdataIN, len(postlocs)))
+    print('Len genotypes: {}'.format(len(genos)))
+    print("Writing", postdataIN)
+    postlocs.to_csv(postdataIN, sep='\t', index=False)
+    print("Done")
+    print("Writing", prefix_name+"geno.txt")
+    genos.to_csv(prefix_name+"geno.txt", sep='\t')
+    print("Done")
+    print("Transposing")
+    genos = genos.drop(genos.columns[:4], axis=1)
+    trans = genos.T
+    #  print("Writing", prefix_name+"transpose.txt")
+    #  trans.to_csv(prefix_name+"transpose.txt", sep='\t')
+    #  print("Done")
+
+    print("Filtering by individual")
+    trans = trans[trans.index.to_series().isin(indv_list)]
+    trans['sort'] = trans.index.to_series().map(sidx)
+    trans = trans.sort_values('sort')
+    trans = trans.drop('sort', axis=1)
+    print("Writing numeric matrix:", outName)
+    trans.to_csv(outName, sep='\t', header=False, index=False)
+    print("Done")
+    return
 
 
 ######################################################################################
@@ -311,15 +273,16 @@ def genoExtract(prefix_name, trial_depths, individualslist, genosFile):
 ######################################################################################
 
 def regPVAL(prefix_name, trial_depths, numIndv):
-    new_prefix = prefix_name + "." + str(trial_depths) 
+    new_prefix = prefix_name + "." + str(trial_depths)
     postdataIN = new_prefix + ".POSTth.txt"
     genosoutName = new_prefix + ".genotypes.txt"
-### make sure location of R script is correct    
+    ### make sure location of R script is correct
     commandLine = "sed -e 's!postdataIN!" + postdataIN + "!g'" + " regression_qtls.R | sed -e 's!genosoutName!" + genosoutName + "!g' | sed -e 's!prefix!" + new_prefix + "!g' | sed -e 's!numIndiv!" + numIndv + "!g'> " +prefix_name+ "1.R"
-    os.system(commandLine)
+    print(commandLine)
+    subprocess.check_call(commandLine, shell=True)
     commandout = "Rscript " +prefix_name+ "1.R"
-    os.system("chmod u+x " +prefix_name+ "1.R")
-    os.system(commandout)
+    subprocess.check_call("chmod u+x " +prefix_name+ "1.R", shell=True)
+    subprocess.check_call(commandout, shell=True)
     os.system("rm " +prefix_name+ "1.R")
     print("regression DONE")
     return()
