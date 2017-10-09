@@ -1,7 +1,16 @@
 # README
 
-cisVar.py is my pipeline written in python3 and uses regression_qtls.R. Put both of these scripts in the directory you want all the outputs to be in. (regression_qtls.R) is called inside of (cisVar.py) so you will not run it directly. Right now I have a MAF>=1% in the R script but if you’d like to change it you can easily do that inside the script.
+`cisVar.py` is my pipeline written in python3 and uses `regression_qtls.R`.
 
+`regression_qtls.R` is called inside of `cisVar.py` so you will not run it
+directly.
+
+Right now the default minor allele frequency filter is `0.1>MAF<0.99`.
+To change these and other constants edit the `regressions_qtls.R` script.
+
+Example pipeline:
+
+```shell
 cisVar.py mpileup -F SampleName -f fastaFile -p mpileupBEDfile -B sortedBam
 
 cisVar.py post -F SampleName -r readDepth -a allelesFile
@@ -9,10 +18,15 @@ cisVar.py post -F SampleName -r readDepth -a allelesFile
 cisVar.py geno -F SampleName -r readDepth -i individualsFile -g genotypesFile
 
 cisVar.py qtls -F SampleName -r readDepth -n numberIndividuals
+```
 
+Requires `samtools v1.9<` and `bedtools v2.26.0<`.
  
-These are all the files you’ll need. Also use samtools v1.9< and bedtools v2.26.0<.
+File formats are described in the script help section
 
+## Script help
+
+```
 -h	help
 
 -g	The genotypes file is a tab separated file, sorted by individuals(columns) and by snps (rows). 
@@ -46,6 +60,14 @@ These are all the files you’ll need. Also use samtools v1.9< and bedtools v2.2
 	    chr1	10510	10511
 		
 -B	sortedBam is the sorted without the -n flag i.e; samtools sort [in.bam]
+```
 
+## Additional Scripts
 
+The `scripts` folder includes a few additional scripts that may be useful
 
+- `convert_vcf2bed.sh` — Used bedops to convert vcfs to bed files (which can then be concatenated to make the required bed
+- `make_alleles.py` — Makes the alleles file described above from the mpileup file
+- `vcf_to_indi_and_geno.py` — Make the individual and genotype files from VCFs
+- `post_process_regression.py` — Use pandas to process the output of the qtls step of the pipeline to add open/closed alleles and rsIDs
+- `rmdup.py` — Remove duplicates from a bam file, picks duplicate to keep randomly, works with paried end data
