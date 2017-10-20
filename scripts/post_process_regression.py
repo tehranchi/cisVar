@@ -101,6 +101,14 @@ def parse_regression(regfile, textfile=None, pandasfile=None, bed=None):
     df['idx'] = df.chrom.astype(str) + '.' + df.position.astype(str)
     df = df.set_index('idx', drop=True)
 
+    # Add rsID if possible
+    if bed:
+        log.info('Loading rsids')
+        df['rsid'] = bed_to_series(bed)
+    else:
+        log.warn('No bed file, all rsids will be "Unknown"')
+        df['rsid'] = 'Unknown'
+
     # Sort the data by position (default is by best pvalue)
     log.info('Sorting')
     df = df.sort_values(['chrom', 'position'])
@@ -118,14 +126,6 @@ def parse_regression(regfile, textfile=None, pandasfile=None, bed=None):
     df['closed_allele'] = np.where(df.post_freq > df.pre_freq, df.alt, df.post_allele)
     df['open_allele'] = np.where(df.post_freq == df.pre_freq, 'NA', df.open_allele)
     df['closed_allele'] = np.where(df.post_freq == df.pre_freq, 'NA', df.closed_allele)
-
-    # Add rsID if possible
-    if bed:
-        log.info('Loading rsids')
-        df['rsid'] = bed_to_series(bed)
-    else:
-        log.info('No bed file, all rsids will be "Unknown"')
-        df['rsid'] = 'Unknown'
 
     # Sort columns
     log.debug('Adjusting columns')
@@ -146,16 +146,18 @@ def bed_to_series(bedfile):
     """Convert a bed file to a series of chr.pos->name."""
     args = dict(sep='\t', usecols=[0, 2, 3])
     log.debug('Checking for bed head')
-    with _open_zipped(bedfile):
-        if not bedfile.readline().startswith('#'):
-            args['header'] = False
+    with _open_zipped(bedfile) as fin:
+        if not fin.readline().startswith('#'):
+            args['header'] = None
     log.debug('Reading in bed file')
     bed = pd.read_csv(bedfile, **args)
     bed.columns = ['chrom', 'pos', 'name']
     log.debug('Indexing bed')
     bed['idx'] = bed.chrom.astype(str) + '.' + bed.pos.astype(str)
+    bed = bed.drop_duplicates('idx', keep=False)
     bed = bed.set_index('idx', drop=True)
     log.debug('Returning rsid series')
+    log.debug('Parsed %s SNPs', len(bed))
     return bed.name
 
 
@@ -247,7 +249,8 @@ def main(argv=None):
             return 1
         parse_regression(ifl, pandasfile=args.pandasfile)
     else:
-        parse_regression(ifl, textfile=ofl, pandasfile=args.pandasfile)
+        parse_regression(ifl, textfile=ofl, pandasfile=args.pandasfile,
+                         bed=args.bedfile)
 
     if loghandle:
         loghandle.close()
