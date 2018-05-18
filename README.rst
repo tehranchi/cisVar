@@ -1,10 +1,9 @@
-######
 cisVar
-######
+======
 
 cisVar is a pipeline to estimate pre-ChIP frequencies from pooled post-ChIP
-frequencies via a regression on the genotypes of the individuals in the pool.
-To use this code you must have a mapped BAM file for each pool (a single pool is
+frequencies via a regression on the genotypes of the individuals in the pool. To
+use this code you must have a mapped BAM file for each pool (a single pool is
 fine) as well as genotype info for all individuals in the pool in VCF format.
 Additional information can be provided also, see below for information.
 
@@ -19,37 +18,39 @@ This code was written by Ashley Tehranchi with minor modifications by Mike
 Dacre. It was produced at Stanford University, but is released here under the
 MIT license.
 
-Current version: 2.0.0b2
+Current version: 2.0.0b3
+
 
 .. contents:: **Contents**
 
+
 Overview
-========
+--------
 
 ``cisVar.py`` is the pipeline written in python3 and uses ``regression_qtls.R``
 (``regression_qtls.R`` is called inside of ``cisVar.py`` so you will not run it
 directly).
 
-In addition, the code at ``scripts/combine.py`` can be used to create combined and
-merged (per-SNP) pandas dataframes from the outputs of ``cisVar.py`` for multiple
-samples.
+In addition, the code at ``scripts/combine.py`` can be used to create combined
+and merged (per-SNP) pandas dataframes from the outputs of ``cisVar.py`` for
+multiple samples.
 
 A complete example Snakemake pipeline is provided in ``pipeline``, you should be
 able to run it by modifying only the ``cisvar_config.json`` file, see the
 Snakemake section below.
 
-Right now the default minor allele frequency filter is ``0.1>MAF<0.99``.
-To change these and other regression constants, edit the ``regressions_qtls.R``
+Right now the default minor allele frequency filter is ``0.1>MAF<0.99``.  To
+change these and other regression constants, edit the ``regressions_qtls.R``
 script.
 
 Installation
-------------
+~~~~~~~~~~~~
 
 Install via PyPI:
 
 .. code:: shell
 
-   pip install cisVar
+    pip install cisVar
 
 Or install from github:
 
@@ -57,7 +58,8 @@ Or install from github:
 
     pip install https://github.com/TheFraserLab/cisVar/tarball/master
 
-Alternatively, you can just clone the repo and use it directly from there.
+Alternatively, you can just clone the repo and use it directly from
+there.
 
 .. code:: shell
 
@@ -65,35 +67,37 @@ Alternatively, you can just clone the repo and use it directly from there.
 
 It should work with python 2 or 3, but python 3 is highly recommended.
 
-
 Prereqs
 .......
 
-Requires ``samtools v1.9`` and ``bedtools v2.26.0`` as well as the following python
-modules (installed automatically by pip):
+Requires ``samtools v1.9`` and ``bedtools v2.26.0`` as well as the
+following python modules (installed automatically by pip):
 
 ``pandas``, ``numpy``, ``psutil``, ``snakemake``, ``wget``
 
-Additionally requires that ``R`` with ``Rscript`` are installed, with the ``ggplot2``
-module installed.
+Additionally requires that ``R`` with ``Rscript`` are installed, with
+the ``ggplot2`` module installed.
 
 Usage
------
+~~~~~
 
 To run this code on your own data you need:
 
-- VCF(s) with genotypes and ref/alt alleles for every SNP you wish to test
-- A mapped BAM file, ideally this will make use of
-    `Hornet <https://github.com/TheFraserLab/Hornet>`_ to remove reference bias.
+- VCF(s) with genotypes and ref/alt alleles for every SNP you wish to
+  test
+- A mapped BAM file, ideally this will make use of `Hornet
+  <https://github.com/TheFraserLab/Hornet>`_ to remove reference bias.
 
 In addition, the following data can be helpful:
 
 - A list of individuals to filter genotypes with (one newline separated file of
-    individuals per pool)
+  individuals per pool)
+
 - A file with ref and alt alleles for your SNPs of interest, to modify those in
-    the genotype VCF files (BED/VCF/txt)
+  the genotype VCF files (BED/VCF/txt)
+
 - A file to limit the SNPs to consider to a subset of those in the VCF
-    (BED/VCF/txt)
+  (BED/VCF/txt)
 
 Example pipeline:
 
@@ -114,66 +118,96 @@ Example pipeline:
     scripts/combine.py {sample}.readDepth.regression.pd
 
 A readDepth of 20 is generally optimal, the sample name can be whatever you
-want, but should be unique per sample. ``{sample}`` is a placeholder to allow any
-number of samples to be combined in the last step.
-
+want, but should be unique per sample. ``{sample}`` is a placeholder to allow
+any number of samples to be combined in the last step.
 
 Snakemake
 .........
 
 The above pipeline can be automated with
-``Snakemake <https://snakemake.readthedocs.io/en/stable/>``_.
+`Snakemake <https://snakemake.readthedocs.io/en/stable/>`_.
 
-To use, install cisVar, navigate to the root of your project, and run ``cisVar.py
-get_snake`` to copy the Snakefile and config file over . Then edit the
-``cisvar_config.json`` file to match your needs.
+To use, install cisVar, navigate to the root of your project, and run
+``cisVar.py get_snake`` to copy the Snakefile and config file over .  Then edit
+the ``cisvar_config.json`` file to match your needs.
 
-You will also need to edit the ``Snakefile`` to set the ``script_prep`` string to
-match what is needed by your system.
+You will also need to edit the ``Snakefile`` to set the ``script_prep`` string
+to match what is needed by your system.
 
 The following are the config options for that file:
 
-+--------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Option       | Description                                                                                                                                                                                                   |
-+==============+===============================================================================================================================================================================================================+
-| name         | A general name for this run, file prefix will be <name>.<sample>.<read_depth>                                                                                                                                 |
-+--------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| sample_name  | The name of the sample, default is population. Used only in the combination of multiple samples.                                                                                                              |
-+--------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| samples      | A list of samples, can just be a list, or a dictionary of {sample:group}, the 'group' in this case allows the use of the same genotype files for multiple samples, can also be a path to a separate json file |
-+--------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| read_depth   | An integer depth to require for each SNP to be considered                                                                                                                                                     |
-+--------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| max_cores    | Used only when parsing VCFs, if you have multiple VCF files (e.g. per chromosome), they will be parsed in parallel up to this many cores (or max avaialable on machine)                                       |
-+--------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| sort_vcfs    | Either 1 or 0, if 1 assumes that VCF files contain a ``chr#`` string in the file name, and sorts the order of files to be chr1->22,X,Y,MT. Don't use if your VCFs don't have ``chr#`` in the name             |
-+--------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| chrom_format | 'chr', 'num', 'ignore': Force format of chromosome name to be ``chr#`` or ``#``. This ensures that all input files have the same format. Use ignore to do nothing.                                            |
-+--------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| bams         | A path to the mapped BAM files, must contain the ``{sample}`` string (unless you only have one bam), e.g. ``/path/to/{sample}.sorted.bam``, ``{sample}`` must be in samples                                   |
-+--------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| cisVar       | Path to the cisVar repository                                                                                                                                                                                 |
-+--------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| vcfs         | Can be a single path (for one vcf), a list of vcfs, or a glob string (e.g. ``/path/to/vcfs/*.vcf.comm.gz``)                                                                                                   |
-+--------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| genome_fa    | Path to a FastA file of the genome you mapped to, single file only.                                                                                                                                           |
-+--------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| inds         | Optional: used to filter VCFs so that the genotype files contain only the individuals in the sample, e.g. ``/path/to/inds/{sample}.ind.txt.gz``. Newline separated file of individuals.                       |
-+--------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| locs         | Optional: a BED/VCF/text file of SNP locations to consider, used to limit the total to be a subset of the genotype file.                                                                                      |
-+--------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| alleles      | Optional: a BED/VCF/text file of alternate ref/alt alleles. Must be a subset of the genotype VCFs. If there is an entry in this file, it's ref/alt alleles will be used instead of those in the genotype file |
-+--------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
++-------------+-------------------------------------------------------+
+| Option      | Description                                           |
++=============+=======================================================+
+| name        | A general name for this run, file prefix will be      |
+|             | ``<name>.<sample>.<read_depth>``                      |
++-------------+-------------------------------------------------------+
+| sample_name | The name of the sample, default is population. Used   |
+|             | only in the combination of multiple samples.          |
++-------------+-------------------------------------------------------+
+| samples     | A list of samples, can just be a list, or a           |
+|             | dictionary of {sample:group}, the 'group' in this     |
+|             | case allows the use of the same genotype files for    |
+|             | multiple samples, can also be a path to a separate    |
+|             | json file                                             |
++-------------+-------------------------------------------------------+
+| read_depth  | An integer depth to require for each SNP to be        |
+|             | considered                                            |
++-------------+-------------------------------------------------------+
+| max_cores   | Used only when parsing VCFs, if you have multiple VCF |
+|             | files ( e.g. per chromosome), they will be parsed in  |
+|             | parallel up to this many cores (or max avaialable on  |
+|             | machine)                                              |
++-------------+-------------------------------------------------------+
+| sort_vcfs   | Either 1 or 0, if 1 assumes that VCF files contain a  |
+|             | ``chr#`` string in the file name, and sorts the order |
+|             | of files to be chr1->22,X,Y,MT. Don't use if your     |
+|             | VCFs don't have ``chr#`` in the name                  |
++-------------+-------------------------------------------------------+
+| chrom_form  | 'chr', 'num', 'ignore': Force format of chromosome    |
+| at          | name to be ``chr#`` or ``#``. This ensures that all   |
+|             | input files have the same format. Use ignore to do    |
+|             | nothing.                                              |
++-------------+-------------------------------------------------------+
+| bams        | A path to the mapped BAM files, must contain the      |
+|             | ``{sample}`` string (unless you only have one bam),   |
+|             | e.g. ``/path/to/{sample}.sorted.bam``, ``{sample}``   |
+|             | must be in samples                                    |
++-------------+-------------------------------------------------------+
+| cisVar      | Path to the cisVar repository                         |
++-------------+-------------------------------------------------------+
+| vcfs        | Can be a single path (for one vcf), a list of vcfs,   |
+|             | or a glob string (e.g.                                |
+|             | ``/path/to/vcfs/*.vcf.comm.gz``)                      |
++-------------+-------------------------------------------------------+
+| genome_fa   | Path to a FastA file of the genome you mapped to,     |
+|             | single file only.                                     |
++-------------+-------------------------------------------------------+
+| inds        | Optional: used to filter VCFs so that the genotype    |
+|             | files contain only the individuals in the sample,     |
+|             | e.g. ``/path/to/inds/{sample}.ind.txt.gz``. Newline   |
+|             | separated file of individuals.                        |
++-------------+-------------------------------------------------------+
+| locs        | Optional: a BED/VCF/text file of SNP locations to     |
+|             | consider, used to limit the total to be a subset of   |
+|             | the genotype file.                                    |
++-------------+-------------------------------------------------------+
+| alleles     | Optional: a BED/VCF/text file of alternate ref/alt    |
+|             | alleles. Must be a subset of the genotype VCFs. If    |
+|             | there is an entry in this file, it's ref/alt alleles  |
+|             | will be used instead of those in the genotype file    |
++-------------+-------------------------------------------------------+
+
 
 Note the last three files are optional, also if ``samples`` is a dict, then the
 value will be used in place of the sample. For example, if you have two samples
-for the same population that are ``yri1`` and ``yri2``, but they both use the same
-genotype file ``yri.geno.vcf``, you can make samples ``{'yri1': 'yri', 'yri2':
-'yri'}`` and then ``yri`` will be used to pick the ind, loc, and allele files
-
+for the same population that are ``yri1`` and ``yri2``, but they both use the
+same genotype file ``yri.geno.vcf``, you can make samples ``{'yri1': 'yri',
+'yri2': 'yri'}`` and then ``yri`` will be used to pick the ind, loc, and allele
+files
 
 Cluster
-~~~~~~~
+'''''''
 
 To run on a cluster, run ``cisVar.py get_snake`` with ``-x`` and edit the
 ``cluster.json`` file to match your cluster environment, then run e.g.:
@@ -192,21 +226,21 @@ or
     --cluster "qsub -l nodes=1:ppn={threads} -l walltime={params.time} -l mem={resources.mem_mb}MB -o {cluster.out} -e {cluster.err}" \
     all
 
-To set the maximum allowed memory per job, add the argument
-``--resources mem_mb=32000``. Note, this is for the whole pipeline, not per job,
-because snakemake is stupid.
+To set the maximum allowed memory per job, add the argument ``--resources
+mem_mb=32000``. Note, this is for the whole pipeline, not per job, because
+snakemake is stupid.
 
-To also combine files, replace ``all`` with  ``combine`` at the end of the command.
-
+To also combine files, replace ``all`` with ``combine`` at the end of the
+command.
 
 Script help
-===========
+-----------
 
 Below are help options available on the command line for cisVar, all these steps
 are run by the above snakemake pipeline.
 
 cisVar.py
----------
+~~~~~~~~~
 
 .. code::
 
@@ -455,7 +489,7 @@ easy access when code is installed via pip.
       -x, --extra  Get additional sample and cluster configs
 
 combine.py
-----------
+~~~~~~~~~~
 
 This script is separate and is in the ``scripts`` folder. It takes a search string
 as an input and produces both combined and merged DataFrames. The combined
@@ -500,8 +534,7 @@ The script will write ``cis_var.combined.20.regression.pd`` and
                             combination, which takes seconds
 
 plot_fun.R
-----------
-
+~~~~~~~~~~
 
 There is an additional script in ``scripts`` called ``plot_fun.R`` that takes a
 single argument—the output of the regression step (e.g.
