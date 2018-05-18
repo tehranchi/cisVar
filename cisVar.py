@@ -1489,9 +1489,13 @@ def main(argv=None):
         if args.extra:
             files += ['cisvar_samples.json', 'cluster.json']
         for fl in files:
-            download(url.format(fl))
+            if os.path.isfile(fl):
+                print('{} already exists, skipping'.format(fl))
+            else:
+                download(url.format(fl))
+                print('')
         print(
-            'Done, edit cisvar_config.json for your needs, use README on '
+            'Done, edit cisvar_config.json for your needs, use README in '
             'github repo for help'
         )
 
